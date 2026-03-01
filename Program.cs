@@ -61,7 +61,7 @@ namespace FP2_Practica01
                             e.mat[i, j] = s[i - 1]; // se rellena el interior de la matriz con los caracteres del nivel
                         }
                         e.mat[e.mat.GetLength(0) - 1, j] = '#'; // se rellena el borde inferior de la matriz con # para los muros
-                        if (s == " ") enc = true; // el nivel termina con una linea en blanco, se sale del bucle
+                        if (s == "") enc = true; // el nivel termina con una linea en blanco, se sale del bucle
                     }
                     for (int i = 0; i < e.mat.GetLength(0); i++)
                     {
@@ -87,7 +87,7 @@ namespace FP2_Practica01
                     while (!sr.EndOfStream && !enc)
                     {
                         string ss = sr.ReadLine();
-                        if (ss == " ") enc = true;    // el nivel termina con una linea en blanco, se sale del bucle
+                        if (ss == "") enc = true;    // el nivel termina con una linea en blanco, se sale del bucle
                         else
                         {
                             l++;           // se cuenta una fila más
@@ -126,7 +126,7 @@ namespace FP2_Practica01
         }
 
 
-        /*static void Render(Estado est)
+        static void Render(Estado est)
         {
             Console.Clear();
             ConsoleColor[] colores = (ConsoleColor[])ConsoleColor.GetValues(typeof(ConsoleColor));
@@ -150,12 +150,17 @@ namespace FP2_Practica01
             Console.ForegroundColor = BloqueToInt(est.obj, colores);
             Console.Write("██");
             Console.ResetColor();
-        }*/
+        }
 
-        static int BloqueToInt(char c)
+        static ConsoleColor BloqueToInt(char c, ConsoleColor[] color)
+        {
+            if (c == '.') return color[color.Length - 1];
+            return color[(int)c - (int)'a' + 1];
+        }
+        /*static int BloqueToInt(char c)
         {
             return ((int)c) - ((int)'a') + 1; // a = 1, b = 2, etc
-        }
+        }*/
         static char LeeInput()
         {
             char d = ' ';
