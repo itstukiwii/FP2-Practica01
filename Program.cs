@@ -126,7 +126,7 @@ namespace FP2_Practica01
         }
 
 
-        static void Render(Estado est)
+        /*static void Render(Estado est)
         {
             Console.Clear();
             ConsoleColor[] colores = (ConsoleColor[])ConsoleColor.GetValues(typeof(ConsoleColor));
@@ -150,18 +150,12 @@ namespace FP2_Practica01
             Console.ForegroundColor = BloqueToInt(est.obj, colores);
             Console.Write("██");
             Console.ResetColor();
-        }
+        }*/
 
-
-        static ConsoleColor BloqueToInt(char c, ConsoleColor[] color)
-        {
-            if (c == '.') return color[color.Length - 1];
-            return color[(int)c - (int)'a' + 1];
-        }
-        /*static int BloqueToInt(char c)
+        static int BloqueToInt(char c)
         {
             return ((int)c) - ((int)'a') + 1; // a = 1, b = 2, etc
-        }*/
+        }
         static char LeeInput()
         {
             char d = ' ';
