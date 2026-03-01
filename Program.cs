@@ -25,9 +25,12 @@ namespace FP2_Practica01
             Console.WriteLine("Introduce el numero de nivel que quieres jugar:");
             int n = int.Parse(Console.ReadLine());
             Estado e = LeeNivel("levels.txt", n); // se lee el nivel del archivo y se guarda en un estado
-            
-        }
+            Render(e); // se renderiza el estado inicial
 
+
+
+
+        }
         static Estado LeeNivel(string file, int n)
         {
             bool enc = false; // indica si se ha encontrado el nivel con su final
@@ -108,7 +111,7 @@ namespace FP2_Practica01
                 {
                     if (est.mat[i, j] == est.obj) // se encuentra el bloque objetivo, por el orden del bucle, siempre será la primera instancia del bloque objetivo
                     {
-                        if (est.mat[i, j + 1 ] == est.obj) // se comprueba si el bloque objetivo es vertical
+                        if (est.mat[i, j + 1] == est.obj) // se comprueba si el bloque objetivo es vertical
                         {
                             est.mat[i, est.mat.GetLength(1) - 1] = '.'; // si el bloque objetivo es vertical, se marca la salida en la parte inferior de la columna
                             est.sal.x = i; // se guarda la posición de la salida
@@ -125,42 +128,43 @@ namespace FP2_Practica01
             }
         }
 
-
         static void Render(Estado est)
         {
-            Console.Clear();
-            ConsoleColor[] colores = (ConsoleColor[])ConsoleColor.GetValues(typeof(ConsoleColor));
+            Console.Clear(); 
+            ConsoleColor[] colores = (ConsoleColor[])ConsoleColor.GetValues(typeof(ConsoleColor)); // array con todos los colores de consola
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             for (int j = 0; j < est.mat.GetLength(1); j++)
             {
-                if (j > 0) Console.WriteLine("");
+                if (j > 0) Console.WriteLine(""); 
                 for (int i = 0; i < est.mat.GetLength(0); i++)
                 {
-                    if (est.mat[i, j] == '#') Console.ForegroundColor = colores[colores.Length - 1];
-                    else if (est.mat[i, j] == '.') Console.ForegroundColor = colores[0];
+                    if (est.mat[i, j] == '#') Console.ForegroundColor = colores[colores.Length - 1]; // el muro se pinta de blanco, último color del array
+                    else if (est.mat[i, j] == '.') Console.ForegroundColor = colores[0]; // el espacio libre se pinta de negro, primer color del array
                     else if (est.mat[i, j] >= 'a' || est.mat[i, j] <= 'z') Console.ForegroundColor = BloqueToInt(est.mat[i, j], colores);
+                    // cada letra corresponde a bloques distintos y cada bloque tiene un color distinto, este se consigue con el método auxiliar
                     Console.Write("██");
                 }
             }
-            Console.SetCursorPosition(est.act.x*2, est.act.y);
+            Console.SetCursorPosition(est.act.x * 2, est.act.y); // se daja espacio entre columnas para que se vea mejor visualmente
             Console.ForegroundColor = BloqueToInt(est.mat[est.act.x, est.act.y], colores);
-            if (est.sel) Console.Write("**");
-            else Console.Write("<>");
-            Console.SetCursorPosition(3, est.mat.GetLength(1));
-            Console.ForegroundColor = BloqueToInt(est.obj, colores);
+            if (est.sel) Console.Write("**"); // se pinta el cursor de seleccionado
+            else Console.Write("<>");         // o el cursor de no seleccionado
+            Console.SetCursorPosition(2, est.mat.GetLength(1) + 1); // se pinta el objetivo, dejando espacio respecto al muro (por eso el +1)
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("Objetivo: ");
+            Console.ForegroundColor = BloqueToInt(est.obj, colores); // el bloque objetivo se pinta del color correspondiente
             Console.Write("██");
             Console.ResetColor();
         }
-
-        static ConsoleColor BloqueToInt(char c, ConsoleColor[] color)
-        {
-            if (c == '.') return color[color.Length - 1];
-            return color[(int)c - (int)'a' + 1];
+        static ConsoleColor BloqueToInt(char c, ConsoleColor[] color) // se accede directamente al enum, no solo al número
+        { 
+            return color[(int)c - (int)'a' + 1]; // a = 1, b = 2, etc, el +1 es para que el bloque a no se corresponda con el color negro que es el de los espacios
         }
         /*static int BloqueToInt(char c)
         {
             return ((int)c) - ((int)'a') + 1; // a = 1, b = 2, etc
         }*/
+
         static char LeeInput()
         {
             char d = ' ';
