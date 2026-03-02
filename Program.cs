@@ -209,22 +209,30 @@ namespace FP2_Practica01
         static void MueveBloque(ref Estado est, Coor dir)
         {
             Coor[] blok;
-            char c = est.mat[est.act.x, est.act.y];
-            blok = new Coor[AUXILIO(est, c)];
-            EncuentraPorfa(est, blok, c);
+            char c = est.mat[est.act.x, est.act.y]; // se guarda el char del bloque seleccionado
+            blok = new Coor[MideBloque(est, c)];    // se crea un array de coordenadas del tamaño del bloque seleccionado
+            EncuentraPorfa(est, blok, c);           // se rellenan las coordenadas de cada parte del bloque seleccionado en el array
 
-            if (est.mat[blok[0].x - 1, est.act.y] != '.' && dir.x < 0) dir.x = 0;
-            if (est.mat[blok[blok.Length - 1].x + 1, est.act.y] != '.' && dir.x > 0) dir.x = 0;
-            if (est.mat[est.act.x, blok[0].y - 1] != '.' && dir.y < 0) dir.y = 0;
+            // comprobaciones para que el bloque no chocque con borde u otro bloque
+            if (est.mat[blok[0].x - 1, est.act.y] != '.' && dir.x < 0) dir.x = 0; 
+            if (est.mat[blok[blok.Length - 1].x + 1, est.act.y] != '.' && dir.x > 0) dir.x = 0; 
+            if (est.mat[est.act.x, blok[0].y - 1] != '.' && dir.y < 0) dir.y = 0; 
             if (est.mat[est.act.x, blok[blok.Length - 1].y + 1] != '.' && dir.y > 0) dir.y = 0;
+
+            // al mover, se actualizan las posiciones 
+            // se pinta bloque en la dirección deseada y se borra la parte de atrás
+            
+            // si el bloque es vertical
             if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c)
             {
+                // si el bloque se mueve a la izquierda
                 if (dir.x < 0 && dir.y == 0) 
                 { 
                     est.mat[blok[0].x + dir.x, est.act.y] = c; 
                     est.mat[blok[blok.Length - 1].x, est.act.y] = '.'; 
                     est.act.x = est.act.x + dir.x;
                 }
+                // si el bloque se mueve a la derecha
                 else if (dir.x > 0 && dir.y == 0) 
                 {
                     est.mat[blok[blok.Length - 1].x + dir.x, est.act.y] = c;
@@ -232,14 +240,16 @@ namespace FP2_Practica01
                     est.act.x = est.act.x + dir.x; 
                 }
             }
-            else if (est.mat[est.act.x, est.act.y + 1] == c || est.mat[est.act.x, est.act.y - 1] == c)
+            else // si no es vertical, debe ser horizontal
             {
+                // si el bloque se mueve hacia arriba
                 if (dir.y < 0 && dir.x == 0) 
                 {
                     est.mat[est.act.x, blok[0].y + dir.y] = c;
                     est.mat[est.act.x, blok[blok.Length - 1].y] = '.';
                     est.act.y = est.act.y + dir.y; 
                 }
+                // si el bloque se mueve hacia abajo
                 else if (dir.y > 0 && dir.x == 0) 
                 { 
                     est.mat[est.act.x, blok[blok.Length - 1].y + dir.y] = c;
@@ -248,41 +258,122 @@ namespace FP2_Practica01
                 }
             }
         }
-        static int AUXILIO(Estado est, char c) //mide la barrita en la que esta el cursor, cuando la está seleccionando, creo
+        static int MideBloque(Estado est, char c) //mide el bloque seleccionado
         {
-            int aux = 0;
-            if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c)
+            // se cambió de recorrido a búsqueda para que escale mejor jeje
+     
+            bool seguir = true;
+            if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c) // si el bloque es vertical, se cuenta cuántas filas ocupa
             {
-                for (int i = 0; i < est.mat.GetLength(0); i++)
+                int top = est.act.x;
+                while (seguir && top >= 0) // se empieza a contar desde la posición del bloque seleccionado, hacia arriba
+                {
+                    if (est.mat[top, est.act.y] == c) top--;
+                    else seguir = false; // si se encuentra un caracter distinto, se ha terminado de contar el bloque, los bloques no están partidos OwO
+                }
+                seguir = true;
+                int bot = est.act.x;
+                while (seguir && bot < est.mat.GetLength(0)) // se sigue contando hacia abajo por si el bloque seleccionado no es la parte superior del bloque
+                {
+                    if (est.mat[bot, est.act.y] == c) bot++;
+                    else seguir = false; // si se encuentra un caracter distinto, se ha terminado de contar el bloque, los bloques no están partidos OwO
+                }
+                return bot - top - 1; // se devuelve el número de filas que ocupa el bloque, restando 1 porque se ha contado la posición inicial dos veces
+
+                /*for (int i = 0; i < est.mat.GetLength(0); i++)
                 {
                     if (est.mat[i, est.act.y] == c) aux++;
-                }
+                }*/
             }
-            else if (est.mat[est.act.x, est.act.y + 1] == c || est.mat[est.act.x, est.act.y - 1] == c)
+            else  // si no es vertical, debe ser horizontal, se cuenta cuántas columnas ocupa
             {
-                for (int i = 0; i < est.mat.GetLength(1); i++)
+                int izq = est.act.y;
+                while (seguir && izq >= 0) // se empieza a contar desde la posición del bloque seleccionado, hacia la izquierda
+                {
+                    if (est.mat[est.act.x, izq] == c) izq--;
+                    else seguir = false; // si se encuentra un caracter distinto, se ha terminado de contar el bloque, los bloques no están partidos :P
+                }
+                seguir = true;
+                int der = est.act.y;
+                while (seguir && der < est.mat.GetLength(1)) // se sigue contando hacia la derecha por si el bloque seleccionado no es la parte más a la izquierda del bloque
+                {
+                    if (est.mat[est.act.x, der] == c) der++;
+                    else seguir = false; // si se encuentra un caracter distinto, se ha terminado de contar el bloque, los bloques no están partidos ;3
+                }
+                return der - izq - 1; // se devuelve el número de columnas que ocupa el bloque, restando 1 porque se ha contado la posición inicial dos veces
+
+                /*for (int i = 0; i < est.mat.GetLength(1); i++)
                 {
                     if (est.mat[est.act.x, i] == c) aux++;
-                }
+                }*/
             }
-            return aux;
         }
-        static void EncuentraPorfa(Estado est, Coor[] n, char c) //este si funciona lo juro coño
+        static void EncuentraPorfa(Estado est, Coor[] n, char c) //este si funciona lo juro coño (fuerzas Hermes)
         {
+            // se guardan las coordenadas de cada parte del bloque en un array de coordenadas
+            // se cambió de recorrido a búsqueda para que escale mejor yippie ;D
+
+            bool seguir = true;
             int aux = 0;
-            if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c)
+            // si el bloque es vertical
+            if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c) 
             {
-                for (int i = 0; i < est.mat.GetLength(0); i++)
+                int start = est.act.x;
+                // start va al principio del bloque para ser desde donde se empieza a guardar en el array de coordenadas
+                while (seguir) 
                 {
-                    if (est.mat[i, est.act.y] == c) { n[aux].x = i; n[aux].y = est.act.y; aux++; }
+                    start--;
+                    if (est.mat[start, est.act.y] != c) seguir = false;
                 }
+                start++; // se vuelve a la posición del bloque, que es la última que se ha contado, para empezar a guardar las coordenadas
+                seguir = true;
+                while (seguir)
+                {
+                    n[aux].x = start; 
+                    n[aux].y = est.act.y; 
+                    aux++;
+                    start++;
+                    if (est.mat[start, est.act.y] != c) seguir = false;
+                }
+
+                /*for (int i = 0; i < est.mat.GetLength(0); i++)
+                {
+                    if (est.mat[i, est.act.y] == c) 
+                    { 
+                        n[aux].x = i; 
+                        n[aux].y = est.act.y; 
+                        aux++; 
+                    }
+                }*/
             }
-            else if (est.mat[est.act.x, est.act.y + 1] == c || est.mat[est.act.x, est.act.y - 1] == c)
+            else // si no es vertical, debe ser horizontal
             {
-                for (int i = 0; i < est.mat.GetLength(1); i++)
+                int start = est.act.y;
+                while (seguir)
                 {
-                    if (est.mat[est.act.x, i] == c) { n[aux].x = est.act.x; n[aux].y = i; aux++; }
+                    start--;
+                    if (est.mat[est.act.x, start] != c) seguir = false;
                 }
+                start++;
+                seguir = true;
+                while (seguir)
+                {
+                    n[aux].x = est.act.x;
+                    n[aux].y = start;
+                    aux++;
+                    start++;
+                    if (est.mat[est.act.x, start] != c) seguir = false;
+                }
+
+                /*for (int i = 0; i < est.mat.GetLength(1); i++)
+                {
+                    if (est.mat[est.act.x, i] == c) 
+                    { 
+                        n[aux].x = est.act.x; 
+                        n[aux].y = i; 
+                        aux++; 
+                    }
+                }*/
             }
         }
 
