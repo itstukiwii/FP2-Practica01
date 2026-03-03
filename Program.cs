@@ -4,6 +4,7 @@
 // Practica 1: Unblock Me
 
 using System;
+using System.IO;
 
 namespace FP2_Practica01
 {
@@ -30,6 +31,11 @@ namespace FP2_Practica01
             public Jugada[] jugadas;
             public int numJugadas;
         }
+        struct Records
+        {
+            public int nivel;
+            public int record;
+        }
 
         static void Main()
         {
@@ -38,11 +44,18 @@ namespace FP2_Practica01
             Estado e = LeeNivel("levels.txt", n); // se lee el nivel del archivo y se guarda en un estado
             Memoria mem = CreaMemoria(); // se crea la memoria para guardar las jugadas, luego se implementa el módulo de deshacer jugada
 
+            Records[] records = new Records[8];
+            InicializaRecords(records); // se inicializa el array de records para luego buscar el record actual del nivel
+            // el 0 es un nivel, por eso hay que inicializarlo a -1 para indicar que no hay niveles guardados
+            BuscaRecords(records); // se buscan los records guardados en el archivo de records
+            int recordActual = records[BuscaIndice(records, n)].record;
+
             bool fin = false; // indica si se ha ganado o no
             bool win = false; // indica si se ha ganado o no, se muestra un mensaje al ganar
+            bool upRec = false; // indica si se ha conseguido un nuevo record
             char tecla;       // tecla pulsada por el jugador
 
-            Render(e, mem); // se renderiza el estado inicial
+            Render(e, mem, recordActual); // se renderiza el estado inicial
             while (!fin)
             {
                 tecla = LeeInput(); // se lee la tecla pulsada por el jugador
@@ -50,7 +63,7 @@ namespace FP2_Practica01
                 else
                 {
                     ProcesaInput(ref e, tecla, ref mem); // se procesa la tecla pulsada y se actualiza el estado
-                    Render(e, mem);                  // se renderiza el nuevo estado
+                    Render(e, mem, recordActual);         // se renderiza el nuevo estado
                     if (e.mat[e.sal.x, e.sal.y] == e.obj) // se comprueba si el bloque objetivo ha llegado a la salida
                     {
                         fin = true; // se ha ganado, se sale del bucle
@@ -62,10 +75,22 @@ namespace FP2_Practica01
             {
                 Console.WriteLine(); // se deja hueco entre el tablero y el mensaje de victoria
                 Console.WriteLine("¡Has ganado! Yayy L(^w^)/"); // mensaje de victoria :3
+                if (recordActual == 0)
+                {
+                    records[BuscaIndice(records, n)].nivel = n; // se guarda el nivel en el array de records
+                    upRec = true; // se ha conseguido un nuevo record
+                }
+                else if (mem.numJugadas < recordActual)
+                {
+                    upRec = true; // se ha conseguido un nuevo record
+                }
+                if (upRec)
+                {
+                    records[BuscaIndice(records, n)].record = mem.numJugadas; // se guarda el nuevo record en el array de records
+                    Console.WriteLine("Además has conseguido un nuevo record <3");
+                    NuevoRecord(records); // se guardan los nuevos records en el archivo de records
+                }
             }
-
-
-
         }
         static Estado LeeNivel(string file, int n)
         {
@@ -165,7 +190,7 @@ namespace FP2_Practica01
         }
 
 
-        static void Render(Estado est, Memoria mem)
+        static void Render(Estado est, Memoria mem, int rec)
         {
             Console.Clear();
             ConsoleColor[] colores = (ConsoleColor[])ConsoleColor.GetValues(typeof(ConsoleColor)); // array con todos los colores de consola
@@ -196,6 +221,8 @@ namespace FP2_Practica01
             Console.WriteLine("██");
             Console.ResetColor();
             Console.WriteLine(" Movimientos: " + mem.numJugadas); // se deja que el jugador pueda ver cuántas jugadas a realizado
+            if (rec > 0) Console.WriteLine(" Record actual: " + rec); // se escribe el record actual
+            else Console.WriteLine(" Aún no hay record OwO"); // se avisa si no hay record
         }
         static ConsoleColor BloqueToInt(char c, ConsoleColor[] color) // se accede directamente al enum, no solo al número
         {
@@ -398,8 +425,8 @@ namespace FP2_Practica01
         }
         static void GuardaJugada(ref Memoria mem, Coor cursor, Coor dir)
         {
-            mem.jugadas[mem.numJugadas%mem.jugadas.Length].cursor = cursor; // se guarda la posición del cursor al mover el bloque
-            mem.jugadas[mem.numJugadas%mem.jugadas.Length].dir = dir;       // se guarda la dirección en la que se ha movido el bloque
+            mem.jugadas[mem.numJugadas % mem.jugadas.Length].cursor = cursor; // se guarda la posición del cursor al mover el bloque
+            mem.jugadas[mem.numJugadas % mem.jugadas.Length].dir = dir;       // se guarda la dirección en la que se ha movido el bloque
             mem.numJugadas++;                                               // se incrementa el número de jugadas en la memoria
         }
         static void InvierteDir(ref Coor dir) // método auxiliar para invertir la dirección al deshacer una jugada
@@ -411,13 +438,68 @@ namespace FP2_Practica01
         {
             if (mem.numJugadas > 0) // solo se puede deshacer si hay jugadas en la memoria
             {
-                Jugada last = mem.jugadas[(mem.numJugadas-1) % mem.jugadas.Length]; // se obtiene la última jugada
+                Jugada last = mem.jugadas[(mem.numJugadas - 1) % mem.jugadas.Length]; // se obtiene la última jugada
                 est.act = last.cursor; // se vuelve a colocar el cursor en la posición que tenía al mover el bloque
                 InvierteDir(ref last.dir); // se invierte la dirección para mover el bloque en la dirección contraria
                 MueveBloque(ref est, last.dir); // se mueve el bloque en la dirección contraria para deshacer la jugada
                 mem.numJugadas--; // se decrementa el número de jugadas en la memoria
             }
         }
+
+
+        static void InicializaRecords(Records[] recs)
+        {
+            for (int i = 0; i < recs.Length; i++)
+            {
+                recs[i].nivel = -1; // se inicializan los niveles a -1 para indicar que no hay niveles guardados
+                recs[i].record = 0; // se inicializan los records a 0 para indicar que no hay records guardados
+            }
+        }
+        static int BuscaIndice(Records[] recs, int n)
+        {
+            int ind = 0; // indice en el array de donde esta el nivel
+            bool enc = false;
+            while (ind < recs.Length && !enc)
+            {
+                if (recs[ind].nivel == n) // se encuentra el nivel, se devuelve su indice para acceder al record actual del nivel
+                {
+                    enc = true;
+                }
+                else if (recs[ind].nivel == -1) // si se encuentra un nivel con valor -1, significa que no hay más niveles guardados, se sale del bucle
+                {
+                    enc = true;
+                }
+                else ind++;
+            }
+            return ind;
+        }
+
+        static void BuscaRecords(Records[] recs)
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, "records.txt"); // comprueba que existe para que no de excepción ;]
+            if (!File.Exists(path)) return;
+            StreamReader sr = new StreamReader("records.txt");
+                for (int i = 0; !sr.EndOfStream; i++)
+                {
+                    recs[i].nivel = int.Parse(sr.ReadLine());
+                    recs[i].record = int.Parse(sr.ReadLine());
+                    sr.ReadLine();                            // hay un espacio en blanco
+                }
+                sr.Close();
+        }
+        static void NuevoRecord(Records[] records)
+        {
+            StreamWriter ss = new StreamWriter("records.txt");
+            for (int i = 0; i < records.Length && records[i].nivel >= 0; i++) // si el nivel es 0, significa que no hay más niveles guardados
+            {
+                ss.WriteLine(records[i].nivel); // se guarda el nivel
+                ss.WriteLine(records[i].record); // se guarda el record
+                ss.WriteLine(); // se deja un espacio en blanco entre cada nivel para facilitar la lectura
+            }
+            ss.Close();
+        }
+
+
 
         static void ProcesaInput(ref Estado est, char c, ref Memoria mem)
         {
@@ -440,8 +522,8 @@ namespace FP2_Practica01
                     {
                         Estado past = est; // se guarda para comparar
                         MueveBloque(ref est, dir);
-                        if(past.act.x == est.act.x && past.act.y == est.act.y) canMove = false; // si el bloque no se ha movido
-                        if(canMove) // solo se guarda la jugada si el bloque se ha movido
+                        if (past.act.x == est.act.x && past.act.y == est.act.y) canMove = false; // si el bloque no se ha movido
+                        if (canMove) // solo se guarda la jugada si el bloque se ha movido
                         {
                             GuardaJugada(ref mem, est.act, dir); // se guarda la jugada en la memoria
                         }
