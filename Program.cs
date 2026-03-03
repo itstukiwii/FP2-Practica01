@@ -13,7 +13,6 @@ namespace FP2_Practica01
         { // representacion de posiciones y direcciones de desplazamiento
             public int x, y;
         }
-
         struct Estado
         { // estado del juego
             public char[,] mat; // # es muro, . es libre, a y b son bloques 
@@ -21,26 +20,37 @@ namespace FP2_Practica01
             public Coor act, sal; //posición del cursor y de la salida
             public bool sel;   // indica si hay bloque seleccionado para mover o no
         }
+        struct Jugada
+        {
+            public Coor cursor;
+            public Coor dir;
+        }
+        struct Memoria
+        {
+            public Jugada[] jugadas;
+            public int numJugadas;
+        }
 
         static void Main()
         {
             Console.WriteLine("Introduce el numero de nivel que quieres jugar:");
             int n = int.Parse(Console.ReadLine());
             Estado e = LeeNivel("levels.txt", n); // se lee el nivel del archivo y se guarda en un estado
+            Memoria mem = CreaMemoria(); // se crea la memoria para guardar las jugadas, luego se implementa el módulo de deshacer jugada
 
             bool fin = false; // indica si se ha ganado o no
             bool win = false; // indica si se ha ganado o no, se muestra un mensaje al ganar
             char tecla;       // tecla pulsada por el jugador
 
-            Render(e); // se renderiza el estado inicial
+            Render(e, mem); // se renderiza el estado inicial
             while (!fin)
             {
                 tecla = LeeInput(); // se lee la tecla pulsada por el jugador
                 if (tecla == 'q') fin = true; // si se pulsa q, se sale del juego
                 else
                 {
-                    ProcesaInput(ref e, tecla); // se procesa la tecla pulsada y se actualiza el estado
-                    Render(e);                  // se renderiza el nuevo estado
+                    ProcesaInput(ref e, tecla, ref mem); // se procesa la tecla pulsada y se actualiza el estado
+                    Render(e, mem);                  // se renderiza el nuevo estado
                     if (e.mat[e.sal.x, e.sal.y] == e.obj) // se comprueba si el bloque objetivo ha llegado a la salida
                     {
                         fin = true; // se ha ganado, se sale del bucle
@@ -155,14 +165,14 @@ namespace FP2_Practica01
         }
 
 
-        static void Render(Estado est)
+        static void Render(Estado est, Memoria mem)
         {
-            Console.Clear(); 
+            Console.Clear();
             ConsoleColor[] colores = (ConsoleColor[])ConsoleColor.GetValues(typeof(ConsoleColor)); // array con todos los colores de consola
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             for (int j = 0; j < est.mat.GetLength(1); j++)
             {
-                if (j > 0) Console.WriteLine(""); 
+                if (j > 0) Console.WriteLine("");
                 for (int i = 0; i < est.mat.GetLength(0); i++)
                 {
                     if (est.mat[i, j] == '#') Console.ForegroundColor = colores[colores.Length - 1]; // el muro se pinta de blanco, último color del array
@@ -174,20 +184,21 @@ namespace FP2_Practica01
             }
             Console.SetCursorPosition(est.act.x * 2, est.act.y); // se daja espacio entre columnas para que se vea mejor visualmente
             Console.BackgroundColor = BloqueToInt(est.mat[est.act.x, est.act.y], colores); // se deja el fondo del color que estaba para que mole más
-            Console.ForegroundColor= ConsoleColor.White;
-            if (est.sel) Console.Write("**"); // se pinta el cursor de seleccionado
-            else Console.Write("<>");         // o el cursor de no seleccionado
-            Console.BackgroundColor= ConsoleColor.Black; // lo reseteo
+            Console.ForegroundColor = ConsoleColor.White;
+            if (est.sel) Console.Write("<>"); // se pinta el cursor de seleccionado
+            else Console.Write("**");         // o el cursor de no seleccionado
+            Console.BackgroundColor = ConsoleColor.Black; // lo reseteo
 
-            Console.SetCursorPosition(2, est.mat.GetLength(1) + 1); // se pinta el objetivo, dejando espacio respecto al muro (por eso el +1)
+            Console.SetCursorPosition(1, est.mat.GetLength(1) + 1); // se pinta el objetivo, dejando espacio respecto al muro (por eso el +1)
             Console.ForegroundColor = ConsoleColor.White;
             Console.Write("Objetivo: ");
             Console.ForegroundColor = BloqueToInt(est.obj, colores); // el bloque objetivo se pinta del color correspondiente
-            Console.Write("██");
+            Console.WriteLine("██");
             Console.ResetColor();
+            Console.WriteLine(" Movimientos: " + mem.numJugadas); // se deja que el jugador pueda ver cuántas jugadas a realizado
         }
         static ConsoleColor BloqueToInt(char c, ConsoleColor[] color) // se accede directamente al enum, no solo al número
-        { 
+        {
             if (c == '.') return color[0]; // el espacio libre se pinta, para evitar excepciones al mover el cursor por un espacio libre
             return color[(int)c - (int)'a' + 1]; // a = 1, b = 2, etc, el +1 es para que el bloque a no se corresponda con el color negro que es el de los espacios
         }
@@ -214,54 +225,54 @@ namespace FP2_Practica01
             EncuentraPorfa(est, blok, c);           // se rellenan las coordenadas de cada parte del bloque seleccionado en el array
 
             // comprobaciones para que el bloque no chocque con borde u otro bloque
-            if (est.mat[blok[0].x - 1, est.act.y] != '.' && dir.x < 0) dir.x = 0; 
-            if (est.mat[blok[blok.Length - 1].x + 1, est.act.y] != '.' && dir.x > 0) dir.x = 0; 
-            if (est.mat[est.act.x, blok[0].y - 1] != '.' && dir.y < 0) dir.y = 0; 
+            if (est.mat[blok[0].x - 1, est.act.y] != '.' && dir.x < 0) dir.x = 0;
+            if (est.mat[blok[blok.Length - 1].x + 1, est.act.y] != '.' && dir.x > 0) dir.x = 0;
+            if (est.mat[est.act.x, blok[0].y - 1] != '.' && dir.y < 0) dir.y = 0;
             if (est.mat[est.act.x, blok[blok.Length - 1].y + 1] != '.' && dir.y > 0) dir.y = 0;
 
             // al mover, se actualizan las posiciones 
             // se pinta bloque en la dirección deseada y se borra la parte de atrás
-            
+
             // si el bloque es vertical
             if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c)
             {
                 // si el bloque se mueve a la izquierda
-                if (dir.x < 0 && dir.y == 0) 
-                { 
-                    est.mat[blok[0].x + dir.x, est.act.y] = c; 
-                    est.mat[blok[blok.Length - 1].x, est.act.y] = '.'; 
+                if (dir.x < 0 && dir.y == 0)
+                {
+                    est.mat[blok[0].x + dir.x, est.act.y] = c;
+                    est.mat[blok[blok.Length - 1].x, est.act.y] = '.';
                     est.act.x = est.act.x + dir.x;
                 }
                 // si el bloque se mueve a la derecha
-                else if (dir.x > 0 && dir.y == 0) 
+                else if (dir.x > 0 && dir.y == 0)
                 {
                     est.mat[blok[blok.Length - 1].x + dir.x, est.act.y] = c;
-                    est.mat[blok[0].x, est.act.y] = '.'; 
-                    est.act.x = est.act.x + dir.x; 
+                    est.mat[blok[0].x, est.act.y] = '.';
+                    est.act.x = est.act.x + dir.x;
                 }
             }
             else // si no es vertical, debe ser horizontal
             {
                 // si el bloque se mueve hacia arriba
-                if (dir.y < 0 && dir.x == 0) 
+                if (dir.y < 0 && dir.x == 0)
                 {
                     est.mat[est.act.x, blok[0].y + dir.y] = c;
                     est.mat[est.act.x, blok[blok.Length - 1].y] = '.';
-                    est.act.y = est.act.y + dir.y; 
+                    est.act.y = est.act.y + dir.y;
                 }
                 // si el bloque se mueve hacia abajo
-                else if (dir.y > 0 && dir.x == 0) 
-                { 
+                else if (dir.y > 0 && dir.x == 0)
+                {
                     est.mat[est.act.x, blok[blok.Length - 1].y + dir.y] = c;
                     est.mat[est.act.x, blok[0].y] = '.';
-                    est.act.y = est.act.y + dir.y; 
+                    est.act.y = est.act.y + dir.y;
                 }
             }
         }
         static int MideBloque(Estado est, char c) //mide el bloque seleccionado
         {
             // se cambió de recorrido a búsqueda para que escale mejor jeje
-     
+
             bool seguir = true;
             if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c) // si el bloque es vertical, se cuenta cuántas filas ocupa
             {
@@ -316,11 +327,11 @@ namespace FP2_Practica01
             bool seguir = true;
             int aux = 0;
             // si el bloque es vertical
-            if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c) 
+            if (est.mat[est.act.x + 1, est.act.y] == c || est.mat[est.act.x - 1, est.act.y] == c)
             {
                 int start = est.act.x;
                 // start va al principio del bloque para ser desde donde se empieza a guardar en el array de coordenadas
-                while (seguir) 
+                while (seguir)
                 {
                     start--;
                     if (est.mat[start, est.act.y] != c) seguir = false;
@@ -329,8 +340,8 @@ namespace FP2_Practica01
                 seguir = true;
                 while (seguir)
                 {
-                    n[aux].x = start; 
-                    n[aux].y = est.act.y; 
+                    n[aux].x = start;
+                    n[aux].y = est.act.y;
                     aux++;
                     start++;
                     if (est.mat[start, est.act.y] != c) seguir = false;
@@ -378,39 +389,109 @@ namespace FP2_Practica01
         }
 
 
-        static void ProcesaInput(ref Estado est, char c)
+        static Memoria CreaMemoria()
         {
+            Memoria mem;
+            mem.jugadas = new Jugada[20]; // se crea un array con 20 jugada, luego se cambia con el módulo
+            mem.numJugadas = 0;           // de primeras no hay jugadas en la memoria
+            return mem;
+        }
+        static void GuardaJugada(ref Memoria mem, Coor cursor, Coor dir)
+        {
+            mem.jugadas[mem.numJugadas%mem.jugadas.Length].cursor = cursor; // se guarda la posición del cursor al mover el bloque
+            mem.jugadas[mem.numJugadas%mem.jugadas.Length].dir = dir;       // se guarda la dirección en la que se ha movido el bloque
+            mem.numJugadas++;                                               // se incrementa el número de jugadas en la memoria
+        }
+        static void InvierteDir(ref Coor dir) // método auxiliar para invertir la dirección al deshacer una jugada
+        {
+            dir.x = -dir.x;
+            dir.y = -dir.y;
+        }
+        static void DeshaceJugada(ref Estado est, ref Memoria mem)
+        {
+            if (mem.numJugadas > 0) // solo se puede deshacer si hay jugadas en la memoria
+            {
+                Jugada last = mem.jugadas[(mem.numJugadas-1) % mem.jugadas.Length]; // se obtiene la última jugada
+                est.act = last.cursor; // se vuelve a colocar el cursor en la posición que tenía al mover el bloque
+                InvierteDir(ref last.dir); // se invierte la dirección para mover el bloque en la dirección contraria
+                MueveBloque(ref est, last.dir); // se mueve el bloque en la dirección contraria para deshacer la jugada
+                mem.numJugadas--; // se decrementa el número de jugadas en la memoria
+            }
+        }
+
+        static void ProcesaInput(ref Estado est, char c, ref Memoria mem)
+        {
+            bool canMove = true; // avisa si no se puede mover el bloque, para no guardar la jugada en ese caso
             Coor dir;
             dir.x = 0; dir.y = 0; // se inicializa la dirección a 0,0 para luego actualizarla según la tecla pulsada
 
             if (c == 's')
             {
-                if (est.mat[est.act.x, est.act.y] != '.') est.sel = !est.sel; 
+                if (est.mat[est.act.x, est.act.y] != '.') est.sel = !est.sel;
                 // si se pulsa s, cambia el estado al contrario (solo si no está en un espacio libre)
             }
             switch (c)
             {
                 // si está seleccionado, se mueve el bloque en la dirección indicada
                 // si no está seleccionado, se mueve el cursor en la dirección indicada
-                case 'u': 
-                    dir.y = -1; dir.x = 0; 
-                    if (est.sel) MueveBloque(ref est, dir); 
+                case 'u':
+                    dir.y = -1; dir.x = 0;
+                    if (est.sel)
+                    {
+                        Estado past = est; // se guarda para comparar
+                        MueveBloque(ref est, dir);
+                        if(past.act.x == est.act.x && past.act.y == est.act.y) canMove = false; // si el bloque no se ha movido
+                        if(canMove) // solo se guarda la jugada si el bloque se ha movido
+                        {
+                            GuardaJugada(ref mem, est.act, dir); // se guarda la jugada en la memoria
+                        }
+                    }
                     else MueveCursor(ref est, dir);
                     break;
-                case 'd': 
-                    dir.y = 1; dir.x = 0; 
-                    if (est.sel) MueveBloque(ref est, dir); 
+                case 'd':
+                    dir.y = 1; dir.x = 0;
+                    if (est.sel)
+                    {
+                        Estado past = est; // se guarda para comparar
+                        MueveBloque(ref est, dir);
+                        if (past.act.x == est.act.x && past.act.y == est.act.y) canMove = false; // si el bloque no se ha movido
+                        if (canMove) // solo se guarda la jugada si el bloque se ha movido
+                        {
+                            GuardaJugada(ref mem, est.act, dir); // se guarda la jugada en la memoria
+                        }
+                    }
                     else MueveCursor(ref est, dir);
                     break;
-                case 'r': 
-                    dir.y = 0; dir.x = 1; 
-                    if (est.sel) MueveBloque(ref est, dir); 
+                case 'r':
+                    dir.y = 0; dir.x = 1;
+                    if (est.sel)
+                    {
+                        Estado past = est; // se guarda para comparar
+                        MueveBloque(ref est, dir);
+                        if (past.act.x == est.act.x && past.act.y == est.act.y) canMove = false; // si el bloque no se ha movido
+                        if (canMove) // solo se guarda la jugada si el bloque se ha movido
+                        {
+                            GuardaJugada(ref mem, est.act, dir); // se guarda la jugada en la memoria
+                        }
+                    }
                     else MueveCursor(ref est, dir);
                     break;
-                case 'l': 
-                    dir.y = 0; dir.x = -1; 
-                    if (est.sel) MueveBloque(ref est, dir); 
+                case 'l':
+                    dir.y = 0; dir.x = -1;
+                    if (est.sel)
+                    {
+                        Estado past = est; // se guarda para comparar
+                        MueveBloque(ref est, dir);
+                        if (past.act.x == est.act.x && past.act.y == est.act.y) canMove = false; // si el bloque no se ha movido
+                        if (canMove) // solo se guarda la jugada si el bloque se ha movido
+                        {
+                            GuardaJugada(ref mem, est.act, dir); // se guarda la jugada en la memoria
+                        }
+                    }
                     else MueveCursor(ref est, dir);
+                    break;
+                case 'z': // si se pulsa z, se deshace la última jugada
+                    DeshaceJugada(ref est, ref mem);
                     break;
             }
         }
